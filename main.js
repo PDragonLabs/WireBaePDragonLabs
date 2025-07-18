@@ -214,7 +214,7 @@ function createDragonfly() {
 
 function createParticles() {
     const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(5000 * 3);
+    const positions = new Float32Array(3000 * 3); // Reduced for performance
     for (let i = 0; i < positions.length; i += 3) {
         positions[i] = (Math.random() - 0.5) * 200;
         positions[i + 1] = (Math.random() - 0.5) * 200;
@@ -356,12 +356,6 @@ function setupEventListeners() {
     hint3Ok.addEventListener('click', () => {
         hint3.classList.remove('visible');
     });
-
-    // Add a click listener to all UI panels to stop propagation to the canvas
-    const uiPanels = [controlsPanel, shareContainer, hint1, hint2, hint3, shareModal];
-    uiPanels.forEach(el => {
-        el.addEventListener('click', (event) => event.stopPropagation());
-    });
 }
 
 function handleFileUpload(event) {
@@ -385,9 +379,14 @@ function setObjectToAdd(type) {
     container.style.cursor = currentObjectToAdd ? 'crosshair' : 'none';
 }
 
-function onSceneClick() {
+function onSceneClick(event) {
     if (!isExperienceActive) return;
     
+    // Check if the click originated on a UI element by checking its class or id
+    if (event.target.closest('#controls-panel, #share-container, .hint-popup, #share-modal')) {
+        return; // Stop if click is on UI
+    }
+
     raycaster.setFromCamera(mouse, camera);
     const pinIntersects = raycaster.intersectObjects(vibePinGroup.children, true);
 
