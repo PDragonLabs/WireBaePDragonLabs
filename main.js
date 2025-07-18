@@ -324,6 +324,12 @@ function setupEventListeners() {
             if (obj.geometry) obj.geometry.dispose();
             if (obj.material) obj.material.dispose();
         }
+        while(vibePinGroup.children.length > 0){
+            const pin = vibePinGroup.children[0];
+            vibePinGroup.remove(pin);
+        }
+        vibePins = [];
+        renderPinList();
     });
 
     pinList.addEventListener('click', (event) => {
@@ -350,6 +356,12 @@ function setupEventListeners() {
     hint3Ok.addEventListener('click', () => {
         hint3.classList.remove('visible');
     });
+
+    // Add a click listener to all UI panels to stop propagation to the canvas
+    const uiPanels = [controlsPanel, shareContainer, hint1, hint2, hint3, shareModal];
+    uiPanels.forEach(el => {
+        el.addEventListener('click', (event) => event.stopPropagation());
+    });
 }
 
 function handleFileUpload(event) {
@@ -373,14 +385,9 @@ function setObjectToAdd(type) {
     container.style.cursor = currentObjectToAdd ? 'crosshair' : 'none';
 }
 
-function onSceneClick(event) {
+function onSceneClick() {
     if (!isExperienceActive) return;
     
-    // Check if the click originated on a UI element
-    if (event.target.closest('#controls-panel, #share-container, .hint-popup, #share-modal')) {
-        return;
-    }
-
     raycaster.setFromCamera(mouse, camera);
     const pinIntersects = raycaster.intersectObjects(vibePinGroup.children, true);
 
