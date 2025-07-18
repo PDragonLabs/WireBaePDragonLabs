@@ -282,7 +282,7 @@ function createPlayhead() {
 function setupEventListeners() {
     window.addEventListener('resize', onWindowResize);
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('click', onWindowClick, true); // Use capturing phase for clicks
+    renderer.domElement.addEventListener('click', onSceneClick); // Listen on canvas
     activationButton.addEventListener('click', startExperience);
     
     genreSelect.addEventListener('change', (e) => {
@@ -350,12 +350,6 @@ function setupEventListeners() {
     hint3Ok.addEventListener('click', () => {
         hint3.classList.remove('visible');
     });
-
-    // Add a click listener to all UI panels to stop propagation to the canvas
-    const uiPanels = [controlsPanel, shareContainer, hint1, hint2, hint3, shareModal];
-    uiPanels.forEach(el => {
-        el.addEventListener('click', (event) => event.stopPropagation());
-    });
 }
 
 function handleFileUpload(event) {
@@ -377,14 +371,6 @@ function setObjectToAdd(type) {
     });
     placementMarker.visible = !!currentObjectToAdd;
     container.style.cursor = currentObjectToAdd ? 'crosshair' : 'none';
-}
-
-function onWindowClick(event) {
-    // If the click is on a UI element that has its own listener, let it handle it.
-    if (event.target.closest('#controls-panel, #share-container, .hint-popup, #share-modal')) {
-        return;
-    }
-    onSceneClick();
 }
 
 function onSceneClick() {
