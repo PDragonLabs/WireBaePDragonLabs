@@ -376,6 +376,11 @@ function setObjectToAdd(type) {
 function onSceneClick(event) {
     if (!isExperienceActive) return;
     
+    // Check if the click originated on a UI element
+    if (event.target.closest('#controls-panel, #share-container, .hint-popup, #share-modal')) {
+        return;
+    }
+
     raycaster.setFromCamera(mouse, camera);
     const pinIntersects = raycaster.intersectObjects(vibePinGroup.children, true);
 
