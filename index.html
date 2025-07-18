@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wire Bae - Vibe Interface</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap');
+
+        :root {
+            --primary-glow: #ff00ff; /* Magenta */
+            --secondary-glow: #00ffff; /* Cyan */
+            --background-dark: #0a0014;
+            --text-color: #f0f0f0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--background-dark);
+            color: var(--text-color);
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        #scene-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .header, .footer {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+            box-sizing: border-box;
+        }
+
+        .header {
+            justify-content: center;
+        }
+        
+        #title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
+            letter-spacing: 0.2em;
+        }
+
+        #ai-status {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 0, 255, 0.4);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+        }
+
+        #ai-status .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: var(--secondary-glow);
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 1.5s infinite ease-in-out;
+            box-shadow: 0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow);
+        }
+
+        #activation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 0, 20, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: all;
+            transition: opacity 0.5s ease-out;
+        }
+
+        #activation-button {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            background: transparent;
+            border: 2px solid var(--primary-glow);
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            text-shadow: 0 0 10px var(--primary-glow);
+            box-shadow: 0 0 20px var(--primary-glow), inset 0 0 20px var(--primary-glow);
+            transition: all 0.3s ease;
+            pointer-events: all;
+        }
+
+        #activation-button:hover {
+            background: var(--primary-glow);
+            color: var(--background-dark);
+            box-shadow: 0 0 30px var(--primary-glow), 0 0 40px var(--primary-glow);
+            text-shadow: none;
+        }
+        
+        #cursor-light {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--secondary-glow);
+            box-shadow: 0 0 25px 10px var(--secondary-glow);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: screen;
+            z-index: 99;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="scene-container"></div>
+    
+    <div id="cursor-light"></div>
+
+    <div id="ui-container">
+        <div class="header">
+            <div id="title">WIRE BAE</div>
+        </div>
+        <div class="footer">
+            <div id="ai-status">
+                <span class="dot"></span><span id="ai-text">Awaiting your vibe...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="activation-overlay">
+        <button id="activation-button">Activate Wire Bae</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- Core Setup ---
+        let scene, camera, renderer, composer, clock;
+        let dragonfly, particles, audio, analyser;
+        const mouse = new THREE.Vector2();
+        let isExperienceActive = false;
+
+        const container = document.getElementById('scene-container');
+        const activationOverlay = document.getElementById('activation-overlay');
+        const activationButton = document.getElementById('activation-button');
+        const cursorLight = document.getElementById('cursor-light');
+        const aiText = document.getElementById('ai-text');
+
+        // --- Initialization ---
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            clock = new THREE.Clock();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 25;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0a0014, 1);
+            container.appendChild(renderer.domElement);
+
+            // Post-processing for Neon Glow
+            setupPostProcessing();
+
+            // Audio
+            setupAudio();
+
+            // Create Objects
+            createDragonfly();
+            createParticles();
+            createEnvironment();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('mousemove', onMouseMove);
+            activationButton.addEventListener('click', startExperience);
+            
+            // Start animation loop immediately
+            animate();
+        }
+
+        // --- Post-processing (Bloom Effect) ---
+        function setupPostProcessing() {
+            const renderPass = new RenderPass(scene, camera);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0;
+            bloomPass.strength = 1.8; // The intensity of the glow
+            bloomPass.radius = 0.5;   // The radius of the glow
+
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderPass);
+            composer.addPass(bloomPass);
+        }
+
+        // --- Audio Setup ---
+        function setupAudio() {
+            const listener = new THREE.AudioListener();
+            camera.add(listener);
+
+            audio = new THREE.Audio(listener);
+            
+            // NOTE: Using a royalty-free track from a reliable host with an open CORS policy to prevent network errors.
+            const audioLoader = new THREE.AudioLoader();
+            audioLoader.load('https://threejs.org/examples/sounds/376737_Skullbeatz___Bad_Cat_Maste.mp3', function(buffer) {
+                audio.setBuffer(buffer);
+                audio.setLoop(true);
+                audio.setVolume(0.5);
+            }, (xhr) => {
+                // Progress callback
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            }, (err) => {
+                console.error('An error happened while loading audio.', err);
+                aiText.textContent = "Audio failed to load. Please refresh.";
+            });
+
+            analyser = new THREE.AudioAnalyser(audio, 128);
+        }
+        
+        // --- Object Creation ---
+        function createDragonfly() {
+            dragonfly = new THREE.Group();
+            const primaryColor = new THREE.Color(0xff00ff);
+            const secondaryColor = new THREE.Color(0x00ffff);
+
+            // Body
+            const bodyGeometry = new THREE.CapsuleGeometry(0.3, 3, 4, 16);
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: primaryColor,
+                emissive: primaryColor,
+                emissiveIntensity: 2,
+                metalness: 0.8,
+                roughness: 0.2,
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.x = Math.PI / 2;
+            dragonfly.add(body);
+
+            // Head (Eye)
+            const headGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const headMaterial = new THREE.MeshStandardMaterial({
+                color: secondaryColor,
+                emissive: secondaryColor,
+                emissiveIntensity: 3,
+                metalness: 0.5,
+                roughness: 0.1,
+            });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.z = 2;
+            dragonfly.add(head);
+
+            // Wings
+            const createWing = () => {
+                const shape = new THREE.Shape();
+                shape.moveTo(0, 0);
+                shape.bezierCurveTo(2, 2, 8, 2, 10, 0);
+                shape.bezierCurveTo(8, -1.5, 2, -1.5, 0, 0);
+
+                const geometry = new THREE.ShapeGeometry(shape, 30);
+                // Store original positions for animation
+                geometry.setAttribute('originalPosition', geometry.attributes.position.clone());
+                
+                const material = new THREE.MeshBasicMaterial({
+                    color: secondaryColor,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.7,
+                });
+                return new THREE.Mesh(geometry, material);
+            };
+
+            const wing1 = createWing();
+            wing1.position.set(0.5, 0, 0);
+            wing1.rotation.y = Math.PI;
+
+            const wing2 = createWing();
+            wing2.position.set(-0.5, 0, 0);
+
+            const wingGroup = new THREE.Group();
+            wingGroup.add(wing1, wing2);
+            wingGroup.position.z = -1;
+            dragonfly.add(wingGroup);
+
+            scene.add(dragonfly);
+        }
+
+        function createParticles() {
+            const particleCount = 5000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                positions[i3] = (Math.random() - 0.5) * 200;
+                positions[i3 + 1] = (Math.random() - 0.5) * 200;
+                positions[i3 + 2] = (Math.random() - 0.5) * 200;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0xaa00ff,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending,
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
+
+        function createEnvironment() {
+            // Adding subtle grid lines for a cyberpunk feel
+            const gridHelper = new THREE.GridHelper(200, 50, 0xaa00ff, 0x444444);
+            gridHelper.position.y = -20;
+            scene.add(gridHelper);
+        }
+
+
+        // --- Event Handlers ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onMouseMove(event) {
+            if (!isExperienceActive) return;
+            // Normalize mouse position
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            cursorLight.style.left = `${event.clientX}px`;
+            cursorLight.style.top = `${event.clientY}px`;
+        }
+        
+        function startExperience() {
+            if (isExperienceActive) return;
+
+            // Start audio after user interaction
+            if (audio.context.state === 'suspended') {
+                audio.context.resume();
+            }
+            audio.play();
+
+            isExperienceActive = true;
+            activationOverlay.style.opacity = '0';
+            activationOverlay.style.pointerEvents = 'none';
+            cursorLight.style.opacity = '1';
+        }
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            let bass = 0, mids = 0, highs = 0;
+
+            // Only get audio data and update UI if the experience is active
+            if (isExperienceActive && analyser) {
+                const freqData = analyser.getFrequencyData();
+                bass = freqData[2] / 255; // Low frequency
+                mids = freqData[30] / 255; // Mid frequency
+                highs = freqData[60] / 255; // High frequency
+
+                // Update UI text based on music
+                if(bass > 0.7) {
+                    aiText.textContent = "BASSLINE DETECTED // SYNCING";
+                } else if (mids > 0.6) {
+                    aiText.textContent = "MELODY PARSED // ENGAGING";
+                } else {
+                    aiText.textContent = "SYSTEMS NOMINAL // VIBING";
+                }
+            }
+
+            // Animate Dragonfly
+            if (dragonfly) {
+                // Hypnotic hover
+                dragonfly.position.y = Math.sin(time * 0.5) * 2;
+
+                // Follow mouse
+                const targetQuaternion = new THREE.Quaternion();
+                const targetLookAt = new THREE.Vector3(mouse.x * 15, mouse.y * 15, 30);
+                const tempMatrix = new THREE.Matrix4();
+                tempMatrix.lookAt(dragonfly.position, targetLookAt, dragonfly.up);
+                targetQuaternion.setFromRotationMatrix(tempMatrix);
+                dragonfly.quaternion.slerp(targetQuaternion, 0.05);
+
+                // Animate wings with music
+                const wingGroup = dragonfly.children[2];
+                if (wingGroup) {
+                    const flapSpeed = 2 + bass * 10;
+                    wingGroup.children[0].rotation.z = Math.sin(time * flapSpeed) * 0.5;
+                    wingGroup.children[1].rotation.z = -Math.sin(time * flapSpeed) * 0.5;
+
+                    // Make wings shimmer/vibrate
+                    wingGroup.children.forEach(wing => {
+                        const positions = wing.geometry.attributes.position;
+                        const originalPositions = wing.geometry.attributes.originalPosition;
+                        for (let i = 0; i < positions.count; i++) {
+                            const z = originalPositions.getZ(i) + (Math.sin(i * 1.5 + time * 20) * mids * 0.3);
+                            positions.setZ(i, z);
+                        }
+                        positions.needsUpdate = true;
+                    });
+                }
+                
+                // Pulse head emissive with bass
+                const head = dragonfly.children[1];
+                head.material.emissiveIntensity = 2 + bass * 5;
+            }
+
+            // Animate Particles
+            if (particles) {
+                particles.rotation.y += delta * 0.05;
+                particles.material.size = 0.1 + bass * 0.2;
+                particles.material.opacity = 0.6 + highs * 0.4;
+            }
+            
+            // Render scene with post-processing
+            composer.render(delta);
+        }
+
+        // --- Start ---
+        init();
+    </script>
+</body>
+</html>
