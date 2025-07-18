@@ -282,8 +282,7 @@ function createPlayhead() {
 function setupEventListeners() {
     window.addEventListener('resize', onWindowResize);
     window.addEventListener('mousemove', onMouseMove);
-    // Listen for clicks on the renderer's canvas, not the whole container
-    renderer.domElement.addEventListener('click', onSceneClick);
+    window.addEventListener('click', onWindowClick, true); // Use capturing phase for clicks
     activationButton.addEventListener('click', startExperience);
     
     genreSelect.addEventListener('change', (e) => {
@@ -378,7 +377,15 @@ function setObjectToAdd(type) {
     container.style.cursor = currentObjectToAdd ? 'crosshair' : 'none';
 }
 
-function onSceneClick(event) {
+function onWindowClick(event) {
+    // If the click is on a UI element that has its own listener, let it handle it.
+    if (event.target.closest('#controls-panel, #share-container, .hint-popup, #share-modal')) {
+        return;
+    }
+    onSceneClick();
+}
+
+function onSceneClick() {
     if (!isExperienceActive) return;
     
     raycaster.setFromCamera(mouse, camera);
