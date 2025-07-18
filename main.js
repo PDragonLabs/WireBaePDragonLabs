@@ -282,7 +282,7 @@ function createPlayhead() {
 function setupEventListeners() {
     window.addEventListener('resize', onWindowResize);
     window.addEventListener('mousemove', onMouseMove);
-    renderer.domElement.addEventListener('click', onSceneClick); // Listen on canvas
+    renderer.domElement.addEventListener('click', onSceneClick);
     activationButton.addEventListener('click', startExperience);
     
     genreSelect.addEventListener('change', (e) => {
@@ -373,7 +373,7 @@ function setObjectToAdd(type) {
     container.style.cursor = currentObjectToAdd ? 'crosshair' : 'none';
 }
 
-function onSceneClick() {
+function onSceneClick(event) {
     if (!isExperienceActive) return;
     
     raycaster.setFromCamera(mouse, camera);
