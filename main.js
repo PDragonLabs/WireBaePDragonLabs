@@ -356,12 +356,6 @@ function setupEventListeners() {
     hint3Ok.addEventListener('click', () => {
         hint3.classList.remove('visible');
     });
-
-    // Add a click listener to all UI panels to stop propagation to the canvas
-    const uiPanels = [controlsPanel, shareContainer, hint1, hint2, hint3, shareModal];
-    uiPanels.forEach(el => {
-        el.addEventListener('click', (event) => event.stopPropagation());
-    });
 }
 
 function handleFileUpload(event) {
@@ -385,7 +379,7 @@ function setObjectToAdd(type) {
     container.style.cursor = currentObjectToAdd ? 'crosshair' : 'none';
 }
 
-function onSceneClick() {
+function onSceneClick(event) {
     if (!isExperienceActive) return;
     
     raycaster.setFromCamera(mouse, camera);
