@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta property="og:image" content="https://raw.githubusercontent.com/pdragonlabs/WireBaePDragonLabs/main/933678ef-e398-4ae2-9843-96ee0bd78a15.jpg">
+    <meta property="og:image:width" content="1280">
+    <meta property="og:image:height" content="640">
+    <meta property="og:title" content="WireBaePDragonLabs">
+    <meta property="og:description" content="A cool project by PDragonLabs">
+    <meta property="og:url" content="https://pdragonlabs.github.io/WireBaePDragonLabs/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wire Bae - Vibe Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap');
+
+        :root {
+            --primary-glow: #ff00ff; /* Magenta */
+            --secondary-glow: #00ffff; /* Cyan */
+            --background-dark: #0a0014;
+            --text-color: #f0f0f0;
+            --ui-bg-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--background-dark);
+            color: var(--text-color);
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        #scene-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+        }
+        
+        #title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
+            letter-spacing: 0.2em;
+            margin-top: -10px;
+        }
+
+        .footer {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #ai-status {
+            background: var(--ui-bg-color);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 0, 255, 0.4);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+        }
+
+        #ai-status .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: var(--secondary-glow);
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 1.5s infinite ease-in-out;
+            box-shadow: 0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow);
+        }
+
+        #activation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 0, 20, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: all;
+            transition: opacity 0.5s ease-out;
+        }
+
+        #activation-button {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            background: transparent;
+            border: 2px solid var(--primary-glow);
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            text-shadow: 0 0 10px var(--primary-glow);
+            box-shadow: 0 0 20px var(--primary-glow), inset 0 0 20px var(--primary-glow);
+            transition: all 0.3s ease;
+            pointer-events: all;
+        }
+
+        #activation-button:hover {
+            background: var(--primary-glow);
+            color: var(--background-dark);
+            box-shadow: 0 0 30px var(--primary-glow), 0 0 40px var(--primary-glow);
+            text-shadow: none;
+        }
+        
+        #cursor-light {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--secondary-glow);
+            box-shadow: 0 0 25px 10px var(--secondary-glow);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: screen;
+            z-index: 99;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #controls-panel, #share-container {
+            position: fixed;
+            padding: 1rem;
+            background: var(--ui-bg-color);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            pointer-events: all;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #controls-panel {
+            top: 2rem;
+            left: 2rem;
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+        
+        #share-container {
+            top: 2rem;
+            right: 2rem;
+            padding: 0.5rem;
+        }
+
+        #share-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        
+        #share-button svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--secondary-glow);
+            transition: transform 0.3s ease;
+        }
+        
+        #share-button:hover svg {
+            transform: scale(1.1);
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            text-shadow: 0 0 5px var(--secondary-glow);
+        }
+        .control-group select, .control-group input, .control-group button, .upload-btn {
+            width: 100%;
+            background: rgba(0,0,0,0.5);
+            color: var(--text-color);
+            border: 1px solid var(--secondary-glow);
+            border-radius: 6px;
+            padding: 0.5rem;
+            font-family: 'Rajdhani', sans-serif;
+            box-sizing: border-box;
+            text-align: center;
+            cursor: pointer;
+        }
+        .upload-btn {
+            display: block;
+            margin-top: 0.5rem;
+        }
+
+        .object-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .object-buttons button.active {
+            background: var(--secondary-glow);
+            color: var(--background-dark);
+            box-shadow: 0 0 10px var(--secondary-glow);
+        }
+        
+        #clear-scene-button, #sequencer-toggle-btn {
+            border-color: var(--primary-glow);
+            margin-top: 1rem;
+        }
+        
+        /* Style for range inputs */
+        input[type=range] {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+          background: rgba(0, 255, 255, 0.3);
+          height: 0.5rem;
+          border-radius: 1rem;
+        }
+        input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          margin-top: -4px;
+          background-color: var(--secondary-glow);
+          height: 1rem;
+          width: 1rem;
+          border-radius: 50%;
+          box-shadow: 0 0 10px var(--secondary-glow);
+        }
+
+        #share-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 0, 20, 0.9);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            pointer-events: all;
+        }
+        
+        #share-modal-content {
+            background: var(--background-dark);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--primary-glow);
+            box-shadow: 0 0 30px var(--primary-glow);
+            text-align: center;
+        }
+        
+        #share-modal-content h2 {
+            font-family: 'Orbitron', sans-serif;
+            margin-top: 0;
+        }
+        
+        #share-image {
+            max-width: 80vw;
+            max-height: 60vh;
+            border: 1px solid var(--secondary-glow);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-buttons a, .modal-buttons button {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--text-color);
+            background: transparent;
+            border: 1px solid var(--secondary-glow);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            text-shadow: 0 0 8px var(--secondary-glow);
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+            text-decoration: none;
+        }
+        
+        .modal-buttons a:hover, .modal-buttons button:hover {
+            background: var(--secondary-glow);
+            color: var(--background-dark);
+            box-shadow: 0 0 20px var(--secondary-glow);
+            text-shadow: none;
+        }
+
+        .hint-popup {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ui-bg-color);
+            padding: 1rem 2rem;
+            border: 1px solid var(--primary-glow);
+            border-radius: 12px;
+            box-shadow: 0 0 20px var(--primary-glow);
+            z-index: 150;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: all;
+        }
+        .hint-popup.visible {
+            opacity: 1;
+        }
+        .hint-popup button {
+             margin-top: 1rem;
+             padding: 0.5rem 1rem;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="scene-container"></div>
+    
+    <div id="cursor-light"></div>
+
+    <div id="ui-container">
+        <div class="header">
+            <div id="controls-panel">
+                <div class="control-group">
+                    <label>Music Vibe</label>
+                    <select id="genre-select">
+                        <option value="cyber-funk">Cyber-Funk</option>
+                        <option value="trap">Trap</option>
+                        <option value="lo-fi">Lo-fi</option>
+                        <option value="old-school">Old School</option>
+                    </select>
+                    <label for="upload-mp3" class="upload-btn">Upload MP3</label>
+                    <input type="file" id="upload-mp3" accept=".mp3" style="display: none;">
+                </div>
+                 <div class="control-group">
+                    <label>Visual Vibe</label>
+                    <label for="glow-slider" style="font-size:0.8em; margin-top:0.5rem;">Neon Glow</label>
+                    <input type="range" id="glow-slider" min="0.5" max="3" step="0.1" value="1.8">
+                    <label for="fog-slider" style="font-size:0.8em; margin-top:0.5rem;">Scene Fog</label>
+                    <input type="range" id="fog-slider" min="0" max="0.02" step="0.001" value="0.005">
+                </div>
+                <div class="control-group">
+                    <label>Color Palette</label>
+                    <label for="particle-color-slider" style="font-size:0.8em; margin-top:0.5rem;">Particle Color</label>
+                    <input type="range" id="particle-color-slider" min="0" max="1" step="0.01" value="0.83">
+                    <label for="grid-color-slider" style="font-size:0.8em; margin-top:0.5rem;">Grid Color</label>
+                    <input type="range" id="grid-color-slider" min="0" max="1" step="0.01" value="0.83">
+                    <label for="dragonfly-color-slider" style="font-size:0.8em; margin-top:0.5rem;">Dragonfly Color</label>
+                    <input type="range" id="dragonfly-color-slider" min="0" max="1" step="0.01" value="0.83">
+                </div>
+                 <div class="control-group">
+                    <label>Sound Grid</label>
+                    <div class="object-buttons">
+                        <button class="obj-btn" data-type="cube">Kick</button>
+                        <button class="obj-btn" data-type="pyramid">Hat</button>
+                        <button class="obj-btn" data-type="sphere">Note</button>
+                        <button class="obj-btn" data-type="torus">Pad</button>
+                    </div>
+                    <button id="sequencer-toggle-btn">Start Sequencer</button>
+                    <button id="clear-scene-button">Clear Scene</button>
+                </div>
+            </div>
+            <div id="title">WIRE BAE</div>
+            <div id="share-container">
+                <button id="share-button" title="Share Vibe">
+                    <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3z"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div class="footer">
+            <div id="ai-status">
+                <span class="dot"></span><span id="ai-text">Awaiting your vibe...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="activation-overlay">
+        <button id="activation-button">Activate Wire Bae</button>
+    </div>
+    
+    <div id="share-modal">
+        <div id="share-modal-content">
+            <h2>Share Your Vibe</h2>
+            <img id="share-image" src="" alt="Wire Bae Vibe Capture">
+            <div class="modal-buttons">
+                <a id="download-link" href="" download="wire-bae-vibe.png">Download</a>
+                <button id="copy-link-button">Copy Link</button>
+                <button id="close-modal-button">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="hint1" class="hint-popup">
+        <p>Welcome to the Sound Grid! Select an object, then click on the grid to create a beat.</p>
+        <button id="hint1-ok">Got it</button>
+    </div>
+    <div id="hint2" class="hint-popup">
+        <p>You can also upload your own MP3 to drive the visuals!</p>
+        <button id="hint2-ok">Awesome</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module" src="./main.js"></script>
+
+</body>
+</html>
