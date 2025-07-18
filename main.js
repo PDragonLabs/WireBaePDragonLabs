@@ -282,7 +282,8 @@ function createPlayhead() {
 function setupEventListeners() {
     window.addEventListener('resize', onWindowResize);
     window.addEventListener('mousemove', onMouseMove);
-    container.addEventListener('click', onSceneClick);
+    // Listen for clicks on the renderer's canvas, not the whole container
+    renderer.domElement.addEventListener('click', onSceneClick);
     activationButton.addEventListener('click', startExperience);
     
     genreSelect.addEventListener('change', (e) => {
@@ -328,7 +329,7 @@ function setupEventListeners() {
 
     pinList.addEventListener('click', (event) => {
         const target = event.target;
-        event.stopPropagation(); // Prevent click from bubbling to the scene
+        event.stopPropagation();
         if (target.classList.contains('goto-btn')) {
             goToPin(parseInt(target.dataset.id));
         } else if (target.classList.contains('remove-btn')) {
@@ -354,12 +355,6 @@ function setupEventListeners() {
         e.stopPropagation();
         hint3.classList.remove('visible');
     });
-
-    const uiElements = [controlsPanel, shareContainer, hint1, hint2, hint3, shareModal];
-    uiElements.forEach(el => {
-        el.addEventListener('mouseenter', () => { mouseOnUI = true; });
-        el.addEventListener('mouseleave', () => { mouseOnUI = false; });
-    });
 }
 
 function handleFileUpload(event) {
@@ -384,7 +379,7 @@ function setObjectToAdd(type) {
 }
 
 function onSceneClick(event) {
-    if (!isExperienceActive || mouseOnUI) return;
+    if (!isExperienceActive) return;
     
     raycaster.setFromCamera(mouse, camera);
     const pinIntersects = raycaster.intersectObjects(vibePinGroup.children, true);
