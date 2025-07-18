@@ -371,10 +371,11 @@
             z-index: 150;
             opacity: 0;
             transition: opacity 0.5s ease;
-            pointer-events: all;
+            pointer-events: none; /* Changed default */
         }
         .hint-popup.visible {
             opacity: 1;
+            pointer-events: all; /* Make visible popups clickable */
         }
         .hint-popup button {
              margin-top: 1rem;
