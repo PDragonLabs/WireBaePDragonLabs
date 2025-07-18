@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta property="og:image" content="https://raw.githubusercontent.com/pdragonlabs/WireBaePDragonLabs/main/933678ef-e398-4ae2-9843-96ee0bd78a15.jpg">
@@ -337,6 +337,18 @@
                     <label for="particle-color-slider">Particle Color</label>
                     <input type="range" id="particle-color-slider" min="0" max="1" step="0.01" value="0.83">
                 </div>
+                <div class="control-group">
+                    <label for="grid-color-slider">Grid Color</label>
+                    <input type="range" id="grid-color-slider" min="0" max="1" step="0.01" value="0.83">
+                </div>
+                 <div class="control-group">
+                    <label for="dragonfly-color-slider">Dragonfly Color</label>
+                    <input type="range" id="dragonfly-color-slider" min="0" max="1" step="0.01" value="0.83">
+                </div>
+                <div class="control-group">
+                    <label for="fog-slider">Scene Fog</label>
+                    <input type="range" id="fog-slider" min="0" max="0.02" step="0.001" value="0.005">
+                </div>
             </div>
             <div id="title">WIRE BAE</div>
             <div id="share-container">
@@ -385,7 +397,7 @@
 
         // --- Core Setup ---
         let scene, camera, renderer, composer, clock, bloomPass;
-        let dragonfly, particles, audio, analyser, filter, targetFrequency;
+        let dragonfly, particles, audio, analyser, filter, targetFrequency, gridHelper, pyramids;
         const mouse = new THREE.Vector2();
         let isExperienceActive = false;
 
@@ -400,7 +412,10 @@
         const genreSelect = document.getElementById('genre-select');
         const glowSlider = document.getElementById('glow-slider');
         const particleColorSlider = document.getElementById('particle-color-slider');
-        
+        const gridColorSlider = document.getElementById('grid-color-slider');
+        const dragonflyColorSlider = document.getElementById('dragonfly-color-slider');
+        const fogSlider = document.getElementById('fog-slider');
+
         const shareButton = document.getElementById('share-button');
         const shareModal = document.getElementById('share-modal');
         const shareImage = document.getElementById('share-image');
@@ -418,6 +433,7 @@
         // --- Initialization ---
         function init() {
             scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0014, 0.005);
             clock = new THREE.Clock();
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.z = 25;
@@ -432,6 +448,8 @@
             createDragonfly();
             createParticles();
             createEnvironment();
+            createStars();
+            createPyramids();
             setupEventListeners();
             
             animate();
@@ -541,9 +559,49 @@
         }
 
         function createEnvironment() {
-            const gridHelper = new THREE.GridHelper(200, 50, 0xaa00ff, 0x444444);
+            gridHelper = new THREE.GridHelper(200, 50, 0xaa00ff, 0x444444);
             gridHelper.position.y = -20;
             scene.add(gridHelper);
+        }
+
+        function createStars() {
+            const starCount = 10000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 2000;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 2000;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 2000;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, transparent: true, opacity: 0.8 });
+            const stars = new THREE.Points(geometry, material);
+            scene.add(stars);
+        }
+
+        function createPyramids() {
+            pyramids = new THREE.Group();
+            const pyramidCount = 20;
+            const pyramidGeometry = new THREE.ConeGeometry(2, 4, 4);
+            const pyramidMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00ffff,
+                emissive: 0x00ffff,
+                emissiveIntensity: 1,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+
+            for (let i = 0; i < pyramidCount; i++) {
+                const pyramid = new THREE.Mesh(pyramidGeometry, pyramidMaterial.clone());
+                pyramid.position.set(
+                    (Math.random() - 0.5) * 150,
+                    -15,
+                    (Math.random() - 0.5) * 150
+                );
+                pyramid.rotation.x = Math.PI;
+                pyramids.add(pyramid);
+            }
+            scene.add(pyramids);
         }
 
         function setupEventListeners() {
@@ -555,6 +613,22 @@
             glowSlider.addEventListener('input', (e) => { if (bloomPass) bloomPass.strength = e.target.value; });
             particleColorSlider.addEventListener('input', (e) => {
                 if (particles) particles.material.color.setHSL(e.target.value, 1.0, 0.5);
+            });
+            gridColorSlider.addEventListener('input', (e) => {
+                if (gridHelper) {
+                    const newColor = new THREE.Color().setHSL(e.target.value, 1.0, 0.5);
+                    gridHelper.material.color = newColor;
+                }
+            });
+            dragonflyColorSlider.addEventListener('input', (e) => {
+                if (dragonfly) {
+                    const newColor = new THREE.Color().setHSL(e.target.value, 1.0, 0.5);
+                    dragonfly.children[0].material.color = newColor;
+                    dragonfly.children[0].material.emissive = newColor;
+                }
+            });
+            fogSlider.addEventListener('input', (e) => {
+                if (scene.fog) scene.fog.density = parseFloat(e.target.value);
             });
             
             shareButton.addEventListener('click', takeScreenshot);
@@ -578,7 +652,6 @@
             cursorLight.style.left = `${event.clientX}px`;
             cursorLight.style.top = `${event.clientY}px`;
 
-            // Update audio filter based on vertical mouse position
             if (filter) {
                 const minFreq = 200;
                 const maxFreq = audio.context.sampleRate / 2;
@@ -586,7 +659,6 @@
                 targetFrequency = minFreq * Math.pow(maxFreq / minFreq, normalizedY);
             }
 
-            // Update playback rate based on horizontal mouse position
             if(audio) {
                 const minRate = 0.75;
                 const maxRate = 1.25;
@@ -671,26 +743,22 @@
                 mids = freqData[30] / 255;
                 highs = freqData[60] / 255;
 
-                // Smoothly transition the filter frequency to the target value
                 if (filter) {
                     filter.frequency.setTargetAtTime(targetFrequency, audio.context.currentTime, 0.05);
                 }
             }
 
             if (dragonfly) {
-                // Autonomous flight path
                 dragonfly.position.x = Math.sin(time * 0.3) * 10;
                 dragonfly.position.y = Math.cos(time * 0.5) * 5;
                 dragonfly.position.z = Math.cos(time * 0.2) * 10;
                 
-                // Look ahead on the path
                 const lookAtPosition = new THREE.Vector3(
                     Math.sin((time + 0.1) * 0.3) * 10,
                     Math.cos((time + 0.1) * 0.5) * 5,
                     Math.cos((time + 0.1) * 0.2) * 10
                 );
                 dragonfly.lookAt(lookAtPosition);
-
 
                 const wingGroup = dragonfly.children[2];
                 if (wingGroup) {
@@ -716,6 +784,13 @@
                 particles.rotation.y += delta * 0.05;
                 particles.material.size = 0.1 + bass * 0.2;
                 particles.material.opacity = 0.6 + highs * 0.4;
+            }
+
+            if (pyramids) {
+                pyramids.children.forEach((pyramid, i) => {
+                    pyramid.position.y = -15 + Math.sin(time + i) * 2;
+                    pyramid.material.emissiveIntensity = bass * 2;
+                });
             }
             
             composer.render(delta);
