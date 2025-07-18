@@ -17,7 +17,6 @@ const GRID_SIZE = 200;
 const STEPS = 16;
 let isVibePinned = false;
 let vibePins = [];
-let mouseOnUI = false; // Flag to track mouse over UI elements
 
 const container = document.getElementById('scene-container');
 const activationOverlay = document.getElementById('activation-overlay');
@@ -26,6 +25,7 @@ const cursorLight = document.getElementById('cursor-light');
 const aiText = document.getElementById('ai-text');
 const controlsPanel = document.getElementById('controls-panel');
 const shareContainer = document.getElementById('share-container');
+const versionDisplay = document.getElementById('version-display');
         
 const genreSelect = document.getElementById('genre-select');
 const glowSlider = document.getElementById('glow-slider');
@@ -328,7 +328,6 @@ function setupEventListeners() {
 
     pinList.addEventListener('click', (event) => {
         const target = event.target;
-        event.stopPropagation();
         if (target.classList.contains('goto-btn')) {
             goToPin(parseInt(target.dataset.id));
         } else if (target.classList.contains('remove-btn')) {
@@ -340,19 +339,22 @@ function setupEventListeners() {
     closeModalButton.addEventListener('click', () => { shareModal.style.display = 'none'; });
     copyLinkButton.addEventListener('click', () => copyToClipboard('https://pdragonlabs.github.io/WireBaePDragonLabs/'));
     
-    hint1Ok.addEventListener('click', (e) => {
-        e.stopPropagation();
+    hint1Ok.addEventListener('click', () => {
         hint1.classList.remove('visible');
         setTimeout(() => hint2.classList.add('visible'), 500);
     });
-    hint2Ok.addEventListener('click', (e) => {
-        e.stopPropagation();
+    hint2Ok.addEventListener('click', () => {
         hint2.classList.remove('visible');
         setTimeout(() => hint3.classList.add('visible'), 500);
     });
-    hint3Ok.addEventListener('click', (e) => {
-        e.stopPropagation();
+    hint3Ok.addEventListener('click', () => {
         hint3.classList.remove('visible');
+    });
+
+    // Add a click listener to all UI panels to stop propagation to the canvas
+    const uiPanels = [controlsPanel, shareContainer, hint1, hint2, hint3, shareModal];
+    uiPanels.forEach(el => {
+        el.addEventListener('click', (event) => event.stopPropagation());
     });
 }
 
@@ -580,6 +582,7 @@ function startExperience() {
         cursorLight.style.opacity = '1';
         controlsPanel.style.opacity = '1';
         shareContainer.style.opacity = '1';
+        versionDisplay.style.opacity = '1';
         loadAudio(audioTracks[genreSelect.value]);
         setTimeout(() => hint1.classList.add('visible'), 1000);
     };
